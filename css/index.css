@@ -1,17 +1,31 @@
 html {
     margin: 0;
+    padding: 0;
     width: 100%;
     height: 100%;
 }
 body {
     margin: 0;
+    padding: 0;
     width: 100%;
     height: 100%;
     font-family: 'Titillium Web', sans-serif;
     position: relative;
     overflow: hidden;
+    background: linear-gradient(#526494, #604484);
 }
 main {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+section#top {
+    width: 100%;
+    height: 100%;
+}
+section#top div {
     top: 50%;
     width: 100%;
     position: absolute;
@@ -22,12 +36,14 @@ main {
 }
 h1 {
     margin: 0;
+    color: #fff;
     font-size: 50px;
     font-weight: 400;
     text-align: center;
 }
 h2 {
     margin: 0;
+    color: #ddd;
     font-weight: 400;
     text-align: center;
 }
@@ -49,7 +65,7 @@ li a{
     height: 100%;
     width: 50px;
     margin: 0 auto;
-    opacity: .5;
+    opacity: .3;
     background-size: contain;
     -webkit-border-radius: 100%;
     -moz-border-radius: 100%;
@@ -60,4 +76,9 @@ li a{
 }
 li a:hover {
     opacity: .8;
+}
+
+section#portfolio {
+    height: 200%;
+    background-color: #ddd;
 }
