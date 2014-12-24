@@ -40,10 +40,10 @@ SineWaveGenerator.prototype.resizeEvent = function() {};
 SineWaveGenerator.prototype._resizeWidth = function() {
   this.dpr = window.devicePixelRatio || 1;
   
-  this.width = this.el.width = window.innerWidth * this.dpr;
-  this.height = this.el.height = window.innerHeight * this.dpr;
-  this.el.style.width = window.innerWidth + 'px';
-  this.el.style.height = window.innerHeight + 'px';
+  this.width = this.el.width = $(window).width() * this.dpr;
+  this.height = this.el.height = $(window).height() * this.dpr;
+  this.el.style.width = $(window).width() + 'px';
+  this.el.style.height = $(window).height() + 'px';
   
   this.waveWidth = this.width * 0.95;
   this.waveLeft = this.width * 0.025;
