@@ -639,11 +639,11 @@ body {
 
 @font-face {
     font-family: "Nixie One";
-    src: url('/fonts/NixieOne.eot'); /* IE9 Compat Modes */
-    src: url("/fonts/NixieOne.eot?#iefix") format("eot"),
-        url("/fonts/NixieOne.woff") format("woff"),
-        url("/fonts/NixieOne.ttf") format("truetype"),
-        url("/fonts/NixieOne.svg#NixieOne") format("svg");
+    src: url('/archive/fonts/NixieOne.eot'); /* IE9 Compat Modes */
+    src: url("/archive/fonts/NixieOne.eot?#iefix") format("eot"),
+        url("/archive/fonts/NixieOne.woff") format("woff"),
+        url("/archive/fonts/NixieOne.ttf") format("truetype"),
+        url("/archive/fonts/NixieOne.svg#NixieOne") format("svg");
 }
 
 h1, h2, h3, h4 {
