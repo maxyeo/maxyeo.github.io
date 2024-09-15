@@ -34,7 +34,7 @@
       const p = l.pathname;
       if (p == '/stills' || p == '/about') {
         sessionStorage.redirect = location.href;
-        l.replace(l.protocol + '//' + l.hostname + p);
+        l.replace(l.protocol + '//' + l.hostname);
       }
     </script>
   </head>
