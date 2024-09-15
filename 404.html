@@ -30,10 +30,10 @@
     <link rel="stylesheet" crossorigin href="/archive/2024/index-4z7iDIMr.css">
 
     <script>
-      sessionStorage.redirect = location.href;
-      const l = window.location;
       const p = l.pathname;
       if (p == '/stills' || p == '/about') {
+        sessionStorage.redirect = location.href;
+        const l = window.location;
         l.replace(l.protocol + '//' + l.hostname + p);
       }
     </script>
