@@ -4,6 +4,8 @@ Source and static archives for Maxwell Yeo's portfolio.
 
 ## Development
 
+Node.js 24 LTS is recommended. Node.js 22 Maintenance LTS is also supported.
+
 ```sh
 cd portfolio24
 npm install
