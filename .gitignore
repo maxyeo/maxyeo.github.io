@@ -1,7 +1,5 @@
 .DS_Store
 test
-
-x/dist
-x/node_modules
-portfolio24/dist
-portfolio24/node_modules
+dist/
+portfolio24/.vite/
+portfolio24/node_modules/

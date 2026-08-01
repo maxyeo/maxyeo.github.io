@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page not found | Maxwell Yeo</title>
+    <meta name="theme-color" content="#242424" />
+    <link rel="icon" type="image/png" href="/archive/2024/max-fav.png" />
+    <style>
+      :root {
+        color: #f5f5f5;
+        background: #242424;
+        font-family: Arial, sans-serif;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+      }
+
+      main { text-align: center; }
+      h1 { font-size: clamp(4rem, 15vw, 10rem); margin: 0; }
+      a { color: inherit; }
+    </style>
+    <script>
+      const route = window.location.pathname.replace(/\/$/, '') || '/';
+      const appRoutes = ['/stills', '/about'];
+
+      if (appRoutes.includes(route)) {
+        sessionStorage.setItem('redirect', window.location.href);
+        window.location.replace(window.location.origin + '/');
+      }
+    </script>
+  </head>
+  <body>
+    <main>
+      <h1>404</h1>
+      <p>I can't find what you're looking for</p>
+      <p><a href="/">Go Home</a></p>
+    </main>
+  </body>
+</html>

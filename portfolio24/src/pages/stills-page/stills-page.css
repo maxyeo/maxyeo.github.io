@@ -1,0 +1,40 @@
+#stills {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+#stills-list {
+  padding: 2rem 0;
+  font-size: 0;
+  display: flex;
+  gap: 20px;
+}
+
+#stills-list.mobile-layout {
+  display: flex;
+}
+
+#stills-list.desktop-layout {
+  display: none;
+}
+
+.stills-col {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (width > 960px) {
+  .stills-col {
+    width: 32%;
+  }
+  #stills-list.mobile-layout {
+    display: none;
+  }
+  #stills-list.desktop-layout {
+    display: flex;
+  }
+}

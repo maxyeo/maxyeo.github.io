@@ -22,27 +22,22 @@
     <link rel="icon" type="image/png" href="/archive/2024/max-fav.png" />
 
     <meta property="og:title" content="Maxwell Yeo | Creative Portfolio"/>
-    <meta property="og:url" content="http://www.maxwellyeo.com/"/>
-    <meta property="og:image" content="http://www.maxwellyeo.com/archive/2024/max-og.jpg"/>
+    <meta property="og:url" content="https://www.maxwellyeo.com/"/>
+    <meta property="og:image" content="https://www.maxwellyeo.com/archive/2024/max-og.jpg"/>
     <meta property="og:site_name" content="Maxwell Yeo"/>
     <meta property="og:description" content="portfolio for my camera hobby"/>
-    
-    <link rel="stylesheet" crossorigin href="/archive/2024/index-4z7iDIMr.css">
-
-    <script>
-      const l = window.location;
-      const p = l.pathname;
-      if (p == '/stills' || p == '/about') {
-        sessionStorage.redirect = location.href;
-        l.replace(l.protocol + '//' + l.hostname);
-      }
-    </script>
+    <meta property="og:type" content="website"/>
   </head>
   <body>
-    <div id="not-found">
-      <h1>404</h1>
-      <p>I can't find what you're looking for</p>
-      <p><a href="/">Go Home</a></p>
-    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      const redirect = sessionStorage.getItem('redirect');
+      sessionStorage.removeItem('redirect');
+
+      if (redirect && redirect !== window.location.href) {
+        history.replaceState(null, '', redirect);
+      }
+    </script>
   </body>
 </html>
