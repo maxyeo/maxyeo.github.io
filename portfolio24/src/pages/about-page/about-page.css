@@ -7,6 +7,10 @@
 
 #about img {
   width: 100%;
+  /* Without an author height, the height attribute's presentational hint
+     would apply and stretch the image to a fixed pixel height, distorting
+     it; height: auto keeps it aspect-ratio-derived instead. */
+  height: auto;
 }
 
 .about-col {

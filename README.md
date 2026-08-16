@@ -32,6 +32,10 @@ To add a photo:
    ```sh
    npm run resize-images
    ```
+   This writes the WebP derivative **and** regenerates
+   `portfolio24/src/data/image-dimensions.json`, the manifest of intrinsic
+   width/height for every derivative that supplies the `<img>`
+   `width`/`height` attributes.
 3. Add `{path: "/archive/img/portfolio/<name>.webp"}` to
    `portfolio24/src/data/stills.tsx` — note the `.webp` extension
    **regardless of the source format**.
@@ -44,8 +48,14 @@ version bump — output is not guaranteed to be byte-identical across
 versions) or `--dry-run` to preview without writing.
 
 Both `originals/` and the generated `static/` derivatives are committed to
-the repo. The script is a maintenance tool run by hand — it is deliberately
-not part of `npm run build`.
+the repo, along with the generated `image-dimensions.json` manifest — it
+must never be hand-edited, and must be re-committed alongside the derivative
+it describes. Re-run `npm run resize-images` and re-commit the manifest
+after any `--max`/`--quality` change, after a `--force` run, or after
+replacing a master in `originals/`. The script is a maintenance tool run by
+hand — it is deliberately not part of `npm run build`. Skipping the script
+after adding a new photo produces a hard error in `npm run dev` naming the
+offending path.
 
 **Warning:** anything placed under `originals/` is published as `.webp`.
 Assets that must keep their original format or filename —

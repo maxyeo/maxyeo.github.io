@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 // Generates web-sized WebP derivatives from the full-resolution masters in
-// originals/, writing them out to the mirrored path under static/.
+// originals/, writing them out to the mirrored path under static/. Each run
+// also regenerates src/data/image-dimensions.json, the manifest of intrinsic
+// width/height for every derivative, which the app reads to render <img>
+// width/height attributes without a runtime image load.
 //
 // Usage (run from portfolio24/):
 //   npm run resize-images                # generate any missing derivatives
@@ -19,6 +22,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url)); // portfolio24/script
 const REPO_ROOT = path.resolve(HERE, '..', '..'); // repo root
 const SRC_ROOT = path.join(REPO_ROOT, 'originals');
 const OUT_ROOT = path.join(REPO_ROOT, 'static');
+const MANIFEST_PATH = path.resolve(HERE, '..', 'src', 'data', 'image-dimensions.json');
 
 // The stills grid (#stills, stills-page.css) is max-width 1200px with three
 // ~32% columns, so a still renders at roughly 380 CSS px wide; the about-page
@@ -42,7 +46,11 @@ const USAGE = `Usage: npm run resize-images -- [options]
   --dry-run          report what would be written, but write nothing
   --max=<px>         long-edge cap in pixels (default ${DEFAULT_MAX_EDGE})
   --quality=<1-100>  WebP quality (default ${DEFAULT_QUALITY})
-  --help, -h         show this message`;
+  --help, -h         show this message
+
+A successful (non dry-run) run also regenerates
+src/data/image-dimensions.json, the manifest of intrinsic width/height for
+every derivative.`;
 
 function parseNumericFlag(arg, flag, min, max) {
   const raw = arg.slice(flag.length + 1); // +1 for the '='
@@ -104,6 +112,14 @@ function formatDims(w, h) {
   return `${w}x${h}`;
 }
 
+// Normalizes an absolute output path into the site-relative `/archive/...`
+// form used as the `src` string throughout the app (and thus as the
+// manifest key), converting platform path separators to `/` so the key
+// matches byte-for-byte regardless of OS.
+function publicPathFor(outPath) {
+  return `/${path.relative(OUT_ROOT, outPath).split(path.sep).join('/')}`;
+}
+
 async function fileExists(p) {
   try {
     await fs.access(p);
@@ -113,7 +129,7 @@ async function fileExists(p) {
   }
 }
 
-async function processFile(job, args, stats) {
+async function processFile(job, args, stats, dimensions) {
   const { inputPath, outPath, ext } = job;
 
   if (path.resolve(outPath) === path.resolve(inputPath)) {
@@ -123,7 +139,14 @@ async function processFile(job, args, stats) {
   const label = path.relative(REPO_ROOT, outPath);
 
   if (!args.force && (await fileExists(outPath))) {
-    console.log(`skip    ${label.padEnd(48)} (output exists, use --force to regenerate)`);
+    const meta = await sharp(outPath).metadata();
+    if (!meta.width || !meta.height) {
+      throw new Error(`could not read dimensions of existing output: ${outPath}`);
+    }
+    dimensions.set(publicPathFor(outPath), { width: meta.width, height: meta.height });
+    console.log(
+      `skip    ${label.padEnd(48)} ${formatDims(meta.width, meta.height).padEnd(10)} (output exists, use --force to regenerate)`,
+    );
     stats.skipped += 1;
     return;
   }
@@ -169,6 +192,7 @@ async function processFile(job, args, stats) {
   }
 
   await fs.rename(tmpPath, outPath);
+  dimensions.set(publicPathFor(outPath), { width: info.width, height: info.height });
 
   const before = inputBuffer.length;
   const after = info.size;
@@ -208,6 +232,30 @@ async function findOrphans(expectedOutputs) {
     }
   }
   return warnings;
+}
+
+// Writes the manifest of public path -> {width, height} for every derivative,
+// sorted by key for a deterministic diff. Uses the same write-to-tmp +
+// rename-then-cleanup-on-failure pattern as processFile so a crash mid-write
+// cannot leave a corrupt manifest behind.
+async function writeManifest(dimensions) {
+  const sortedKeys = [...dimensions.keys()].sort();
+  const obj = {};
+  for (const key of sortedKeys) obj[key] = dimensions.get(key);
+
+  await fs.mkdir(path.dirname(MANIFEST_PATH), { recursive: true });
+  const tmpPath = `${MANIFEST_PATH}.tmp`;
+  try {
+    await fs.writeFile(tmpPath, `${JSON.stringify(obj, null, 2)}\n`);
+    await fs.rename(tmpPath, MANIFEST_PATH);
+  } catch (err) {
+    if (tmpPath.endsWith('.tmp')) {
+      await fs.rm(tmpPath, { force: true });
+    }
+    throw err;
+  }
+
+  console.log(`manifest ${path.relative(REPO_ROOT, MANIFEST_PATH)} (${sortedKeys.length} entries)`);
 }
 
 async function collectJobs() {
@@ -253,10 +301,11 @@ async function main() {
 
   const jobs = await collectJobs();
   const expectedOutputs = new Set(jobs.map((j) => path.resolve(j.outPath)));
+  const dimensions = new Map();
 
   for (const job of jobs) {
     try {
-      await processFile(job, args, stats);
+      await processFile(job, args, stats, dimensions);
     } catch (err) {
       stats.failed += 1;
       console.error(`fail    ${path.relative(REPO_ROOT, job.inputPath)}: ${err.message}`);
@@ -265,6 +314,16 @@ async function main() {
 
   const warnings = await findOrphans(expectedOutputs);
   for (const w of warnings) console.warn(w);
+
+  if (args.dryRun) {
+    console.log('manifest unchanged (dry-run)');
+  } else if (stats.failed > 0) {
+    console.warn(
+      'warn: one or more files failed, leaving image-dimensions.json unchanged (it is regenerated wholesale, so a partial run would drop entries)',
+    );
+  } else {
+    await writeManifest(dimensions);
+  }
 
   const savedPct =
     stats.inputBytes > 0

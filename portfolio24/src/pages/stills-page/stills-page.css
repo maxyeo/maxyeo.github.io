@@ -14,6 +14,11 @@
 #stills-list img {
   display: block;
   width: 100%;
+  /* The width/height attributes are a presentational hint that only applies
+     when no author rule sets that CSS property. This rule sets width but not
+     height, so without this line the height attribute would apply and
+     stretch every image to a fixed pixel height, distorting it. */
+  height: auto;
   margin-bottom: 20px;
   break-inside: avoid;
 }
