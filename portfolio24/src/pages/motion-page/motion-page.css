@@ -7,23 +7,8 @@
 
 #motion-list {
   padding: 2rem 0;
-  font-size: 0;
-  display: flex;
-  gap: 20px;
-}
-
-#motion-list.mobile-layout {
-  display: flex;
-}
-
-#motion-list.desktop-layout {
-  display: none;
-}
-
-.motion-col {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 
@@ -41,13 +26,7 @@
 }
 
 @media (width > 960px) {
-  .motion-col {
-    width: 50%;
-  }
-  #motion-list.mobile-layout {
-    display: none;
-  }
-  #motion-list.desktop-layout {
-    display: flex;
+  #motion-list {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
