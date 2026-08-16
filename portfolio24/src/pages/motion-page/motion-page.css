@@ -19,10 +19,64 @@
   padding-bottom: 56.25%;
 }
 
-.video object {
+/* The facade and the player fill the same absolutely-positioned box inside
+   .video, whose height comes from padding-bottom alone — so swapping one for
+   the other on click cannot shift layout. */
+.video iframe,
+.video-facade {
   position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  border: 0;
+}
+
+.video-facade {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  color: #e2e2e2;
+  background-color: #1a1a1a;
+}
+
+.video-facade img {
+  display: block;
+  width: 100%;
+  /* Both dimensions are set here, so the width/height attributes act purely as
+     an aspect-ratio hint for the loading placeholder and never size the image
+     (cf. the same note in stills-page.css / about-page.css). */
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4rem;
+  height: 4rem;
+  transform: translate(-50%, -50%);
+  opacity: .85;
+  filter: drop-shadow(0 0 12px rgb(0 0 0 / .5));
+  transition: opacity .3s, transform .3s cubic-bezier(.19, 1, .22, 1);
+  pointer-events: none;
+}
+
+.video-facade:hover .video-play,
+.video-facade:focus-visible .video-play {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.video-facade:focus-visible {
+  outline: 3px solid #e2e2e2;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .video-play {
+    transition: none;
+  }
 }
 
 @media (width > 960px) {

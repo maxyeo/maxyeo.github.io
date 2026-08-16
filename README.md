@@ -63,6 +63,28 @@ Assets that must keep their original format or filename —
 everything under `static/archive/old/` — must stay in `static/` and out of
 `originals/`.
 
+### Adding a new motion video
+
+The motion page click-to-play facade shows a self-hosted thumbnail instead
+of hotlinking YouTube, so the page makes no request to Google until a
+visitor actually clicks play. To add a video:
+
+1. Grab the thumbnail from
+   `https://i.ytimg.com/vi/<youtube-id>/maxresdefault.jpg`.
+2. Save it as `originals/archive/img/motion/<youtube-id>.jpg`, using the
+   exact, case-correct video ID — the app derives the thumbnail path from
+   the ID in `motion.tsx`, so a case mismatch is a silent 404 in
+   production.
+3. From `portfolio24/`, run `npm run resize-images`.
+4. Add `{name: "<title>", youtube: "<youtube-id>"}` to
+   `portfolio24/src/data/motion.tsx`.
+
+Skipping step 3 produces a hard error in `npm run dev` naming the missing
+derivative. Unlike the photography masters, these masters are
+re-downloadable from YouTube at any time, so the "only copies" warning
+above does not apply to `img/motion/` — but the "never delete from
+`originals/`" rule still holds procedurally.
+
 ## Deployment
 
 Pushes to `main` build the React application and deploy the resulting `dist/`
