@@ -19,7 +19,10 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  /* Only a dark palette exists (see the commented-out light block below), so
+     declare dark alone — otherwise browser UI (scrollbars, focus rings, text
+     selection, form controls) renders light against this near-black page. */
+  color-scheme: dark;
   color: #e2e2e2;
   background-color: #242424;
 
