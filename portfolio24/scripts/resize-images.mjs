@@ -36,10 +36,30 @@ const ACCEPTED_EXTENSIONS = new Set([
   '.tiff',
 ]);
 
+const USAGE = `Usage: npm run resize-images -- [options]
+
+  --force            regenerate derivatives even if the output already exists
+  --dry-run          report what would be written, but write nothing
+  --max=<px>         long-edge cap in pixels (default ${DEFAULT_MAX_EDGE})
+  --quality=<1-100>  WebP quality (default ${DEFAULT_QUALITY})
+  --help, -h         show this message`;
+
+function parseNumericFlag(arg, flag, min, max) {
+  const raw = arg.slice(flag.length + 1); // +1 for the '='
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < min || value > max) {
+    throw new Error(
+      `${flag} expects an integer between ${min} and ${max}, got "${raw}"`,
+    );
+  }
+  return value;
+}
+
 function parseArgs(argv) {
   const args = {
     force: false,
     dryRun: false,
+    help: false,
     maxEdge: DEFAULT_MAX_EDGE,
     quality: DEFAULT_QUALITY,
   };
@@ -48,10 +68,16 @@ function parseArgs(argv) {
       args.force = true;
     } else if (arg === '--dry-run') {
       args.dryRun = true;
+    } else if (arg === '--help' || arg === '-h') {
+      args.help = true;
     } else if (arg.startsWith('--max=')) {
-      args.maxEdge = Number(arg.slice('--max='.length));
+      args.maxEdge = parseNumericFlag(arg, '--max', 1, 20000);
     } else if (arg.startsWith('--quality=')) {
-      args.quality = Number(arg.slice('--quality='.length));
+      args.quality = parseNumericFlag(arg, '--quality', 1, 100);
+    } else {
+      // Fail loudly rather than silently ignoring a typo: a mistyped
+      // --dry-run would otherwise write files the caller did not expect.
+      throw new Error(`unknown argument: ${arg}`);
     }
   }
   return args;
@@ -87,13 +113,8 @@ async function fileExists(p) {
   }
 }
 
-async function processFile(inputPath, args, stats) {
-  const rel = path.relative(SRC_ROOT, inputPath);
-  const ext = path.extname(rel);
-  if (!ACCEPTED_EXTENSIONS.has(ext.toLowerCase())) return;
-
-  const relNoExt = rel.slice(0, -ext.length);
-  const outPath = path.join(OUT_ROOT, `${relNoExt}.webp`);
+async function processFile(job, args, stats) {
+  const { inputPath, outPath, ext } = job;
 
   if (path.resolve(outPath) === path.resolve(inputPath)) {
     throw new Error(`refusing to overwrite input in place: ${inputPath}`);
@@ -108,15 +129,14 @@ async function processFile(inputPath, args, stats) {
   }
 
   const inputBuffer = await fs.readFile(inputPath);
-  const inputStat = await fs.stat(inputPath);
-  const inputMeta = await sharp(inputBuffer).metadata();
+  const inputMeta = await sharp(inputBuffer, { failOn: 'none' }).metadata();
 
   const isConversion = ext.toLowerCase() !== '.webp';
   const verb = isConversion ? 'convert' : 'resize';
 
   if (args.dryRun) {
     console.log(
-      `${verb.padEnd(7)} ${label.padEnd(48)} ${formatDims(inputMeta.width, inputMeta.height).padEnd(10)} ${formatBytes(inputStat.size)}  (dry-run)`,
+      `${verb.padEnd(7)} ${label.padEnd(48)} ${formatDims(inputMeta.width, inputMeta.height).padEnd(10)} ${formatBytes(inputBuffer.length)}  (dry-run)`,
     );
     stats.skipped += 1;
     return;
@@ -125,20 +145,32 @@ async function processFile(inputPath, args, stats) {
   await fs.mkdir(path.dirname(outPath), { recursive: true });
   const tmpPath = `${outPath}.tmp`;
 
-  const info = await sharp(inputBuffer, { failOn: 'none' })
-    .rotate() // apply EXIF orientation before measuring/resizing
-    .resize({
-      width: args.maxEdge,
-      height: args.maxEdge,
-      fit: 'inside',
-      withoutEnlargement: true,
-    })
-    .webp({ quality: args.quality, effort: 6 })
-    .toFile(tmpPath);
+  let info;
+  try {
+    info = await sharp(inputBuffer, { failOn: 'none' })
+      .rotate() // apply EXIF orientation before measuring/resizing
+      .resize({
+        width: args.maxEdge,
+        height: args.maxEdge,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: args.quality, effort: 6 })
+      .toFile(tmpPath);
+  } catch (err) {
+    // Clean up the partial write so a failed run cannot leave a truncated
+    // *.webp.tmp behind in static/, where publicDir would deploy it. The
+    // guard keeps this removal incapable of targeting anything but the
+    // scratch file constructed immediately above.
+    if (tmpPath.endsWith('.tmp')) {
+      await fs.rm(tmpPath, { force: true });
+    }
+    throw err;
+  }
 
   await fs.rename(tmpPath, outPath);
 
-  const before = inputStat.size;
+  const before = inputBuffer.length;
   const after = info.size;
   const pct = before > 0 ? ((after - before) / before) * 100 : 0;
 
@@ -151,29 +183,59 @@ async function processFile(inputPath, args, stats) {
   stats.outputBytes += after;
 }
 
-async function findOrphans() {
-  const portfolioOutDir = path.join(OUT_ROOT, 'archive', 'img', 'portfolio');
+// Warns about derivatives in static/ that no longer have a master in
+// originals/ — the "someone deleted an original but the generated file
+// lingered" case. Only the directories that actually receive derivatives are
+// inspected, and only non-recursively, so unrelated assets living alongside
+// them (max-og.jpg, max-fav.png) are never considered. Warn only: this
+// function must never delete anything.
+async function findOrphans(expectedOutputs) {
   const warnings = [];
-  if (!(await fileExists(portfolioOutDir))) return warnings;
+  const dirs = new Set([...expectedOutputs].map((p) => path.dirname(p)));
 
-  for await (const outFile of walk(portfolioOutDir)) {
-    const rel = path.relative(OUT_ROOT, outFile);
-    const relNoExt = rel.slice(0, -path.extname(rel).length);
-    const candidates = [...ACCEPTED_EXTENSIONS].map((ext) =>
-      path.join(SRC_ROOT, `${relNoExt}${ext}`),
-    );
-    const hasOriginal = (
-      await Promise.all(candidates.map(fileExists))
-    ).some(Boolean);
-    if (!hasOriginal) {
-      warnings.push(`warn: orphan derivative, no original: ${path.relative(REPO_ROOT, outFile)}`);
+  for (const dir of dirs) {
+    if (!(await fileExists(dir))) continue;
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile() || entry.name.startsWith('.')) continue;
+      if (path.extname(entry.name).toLowerCase() !== '.webp') continue;
+      const outFile = path.join(dir, entry.name);
+      if (!expectedOutputs.has(path.resolve(outFile))) {
+        warnings.push(
+          `warn: orphan derivative, no original: ${path.relative(REPO_ROOT, outFile)}`,
+        );
+      }
     }
   }
   return warnings;
 }
 
+async function collectJobs() {
+  const jobs = [];
+  for await (const inputPath of walk(SRC_ROOT)) {
+    const rel = path.relative(SRC_ROOT, inputPath);
+    const ext = path.extname(rel);
+    if (!ACCEPTED_EXTENSIONS.has(ext.toLowerCase())) continue;
+    const outPath = path.join(OUT_ROOT, `${rel.slice(0, -ext.length)}.webp`);
+    jobs.push({ inputPath, outPath, ext });
+  }
+  return jobs;
+}
+
 async function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    console.error(`${err.message}\n\n${USAGE}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (args.help) {
+    console.log(USAGE);
+    return;
+  }
 
   if (!(await fileExists(SRC_ROOT))) {
     console.error(`originals/ not found at ${SRC_ROOT}`);
@@ -189,16 +251,19 @@ async function main() {
     outputBytes: 0,
   };
 
-  for await (const file of walk(SRC_ROOT)) {
+  const jobs = await collectJobs();
+  const expectedOutputs = new Set(jobs.map((j) => path.resolve(j.outPath)));
+
+  for (const job of jobs) {
     try {
-      await processFile(file, args, stats);
+      await processFile(job, args, stats);
     } catch (err) {
       stats.failed += 1;
-      console.error(`fail    ${path.relative(REPO_ROOT, file)}: ${err.message}`);
+      console.error(`fail    ${path.relative(REPO_ROOT, job.inputPath)}: ${err.message}`);
     }
   }
 
-  const warnings = await findOrphans();
+  const warnings = await findOrphans(expectedOutputs);
   for (const w of warnings) console.warn(w);
 
   const savedPct =
