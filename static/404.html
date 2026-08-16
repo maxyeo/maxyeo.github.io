@@ -25,10 +25,20 @@
       a { color: inherit; }
     </style>
     <script>
-      const route = window.location.pathname.replace(/\/$/, '') || '/';
-      const appRoutes = ['/stills', '/about'];
-
-      if (appRoutes.includes(route)) {
+      // GitHub Pages has no server-side rewrite, so a deep link to a client-side
+      // route (/stills, /about, ...) is served this page instead of the app.
+      //
+      // The fix is a bounce: stash the URL the visitor actually asked for, load
+      // the app at "/", and let portfolio24/index.html read the stash back and
+      // history.replaceState() the address bar to it before React mounts. The
+      // router then sees the original path and renders it.
+      //
+      // Every unmatched path bounces, not a hardcoded list of app routes — the
+      // router owns the question of what is a real page (it has a "*" catch-all
+      // that renders a 404 view), so adding a route needs no change here. The
+      // guard below is only to avoid bouncing "/" to itself, which would loop
+      // if this page were ever served at the root.
+      if (window.location.pathname !== '/') {
         sessionStorage.setItem('redirect', window.location.href);
         window.location.replace(window.location.origin + '/');
       }

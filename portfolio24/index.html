@@ -32,6 +32,10 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Receiving end of the static/404.html bounce (see the comment there).
+      // This is a classic inline script, so it runs during parsing — ahead of
+      // the deferred module above — and the router mounts already seeing the
+      // path the visitor originally asked for.
       const redirect = sessionStorage.getItem('redirect');
       sessionStorage.removeItem('redirect');
 
