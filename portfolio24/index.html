@@ -1,6 +1,33 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- charset first: the spec wants it declared inside the first 1024 bytes,
+         and keeping it at the very top means a later addition to <head> can
+         never push it out and make the parser guess an encoding and restart. -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Start DNS/TCP/TLS to the analytics origins before the requests are
+         discovered. googletagmanager is a small win (its script tag is right
+         below), but google-analytics.com is only reached once gtag.js has
+         downloaded and run, so warming it saves a full connection setup.
+
+         Deliberately no hint for YouTube: the motion page uses a click-to-play
+         facade with self-hosted thumbnails, so the page makes no request to
+         Google's video origins until a visitor actually asks for a video, and
+         preconnecting on load would give that away for nothing. -->
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="preconnect" href="https://www.google-analytics.com" />
+
+    <!-- The body weight (400 -> Regular) is what sets the header wordmark and
+         all copy above the fold. Without this the face is a three-hop discovery
+         — HTML, then CSS, then @font-face — which with font-display: swap means
+         a visible flash of fallback text. Only this one cut is preloaded; the
+         other three are ~80 KB each and none of them carry above-the-fold text
+         worth that much high-priority bandwidth. crossorigin is required: fonts
+         are fetched in CORS mode, and without it the preload is not reused. -->
+    <link rel="preload" href="/archive/fonts/Brut_Grotesque_WEB-Regular.woff2" as="font" type="font/woff2" crossorigin />
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-PGGQZZP1RV"></script>
     <script>
@@ -11,9 +38,6 @@
       gtag('config', 'G-PGGQZZP1RV');
     </script>
 
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
     <title>Maxwell Yeo | Creative Portfolio</title>
     <meta name="description" content="Portfolio for my camera hobby.  dance films and portrait photography">
     <meta name="author" content="Maxwell Yeo">
