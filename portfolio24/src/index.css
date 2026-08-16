@@ -1,3 +1,16 @@
+/* The family ships two cuts and no true bold: Book is usWeightClass 350, Regular
+   is 400. Declare them at their real weights — Book was previously registered as
+   700, which inverted the hierarchy so every bold rule resolved to the *lighter*
+   face. Regular (400) is therefore the heaviest cut available, and the CSS
+   font-matching algorithm falls back to it for any request above 400. */
+@font-face {
+  font-family: 'Brut Grotesque';
+  src: url('/archive/fonts/Brut_Grotesque_WEB-Book.woff2') format('woff2');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 350;
+}
+
 @font-face {
   font-family: 'Brut Grotesque';
   src: url('/archive/fonts/Brut_Grotesque_WEB-Regular.woff2') format('woff2');
@@ -6,18 +19,14 @@
   font-weight: 400;
 }
 
-@font-face {
-  font-family: 'Brut Grotesque';
-  src: url('/archive/fonts/Brut_Grotesque_WEB-Book.woff2') format('woff2');
-  font-display: swap;
-  font-style: normal;
-  font-weight: 700;
-}
-
 :root {
   font-family: Brut Grotesque, Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  font-weight: 400;
+
+  /* Body copy sits on Book (350) so that bold rules, which resolve to Regular
+     (400), read as genuinely heavier. font-synthesis: none below means the
+     contrast has to come from the two real cuts, not a faux-bold. */
+  font-weight: 350;
 
   /* Only a dark palette exists (see the commented-out light block below), so
      declare dark alone — otherwise browser UI (scrollbars, focus rings, text
