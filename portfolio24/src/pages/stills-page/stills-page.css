@@ -7,34 +7,19 @@
 
 #stills-list {
   padding: 2rem 0;
-  font-size: 0;
-  display: flex;
-  gap: 20px;
+  column-count: 1;
+  column-gap: 20px;
 }
 
-#stills-list.mobile-layout {
-  display: flex;
-}
-
-#stills-list.desktop-layout {
-  display: none;
-}
-
-.stills-col {
+#stills-list img {
+  display: block;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  margin-bottom: 20px;
+  break-inside: avoid;
 }
 
 @media (width > 960px) {
-  .stills-col {
-    width: 32%;
-  }
-  #stills-list.mobile-layout {
-    display: none;
-  }
-  #stills-list.desktop-layout {
-    display: flex;
+  #stills-list {
+    column-count: 3;
   }
 }
