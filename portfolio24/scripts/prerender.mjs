@@ -43,14 +43,39 @@ const DIST = path.resolve(ROOT, '..', 'dist');
 // need to become path-aware.
 const ORIGIN = 'https://maxwellyeo.com';
 
+// Counts every occurrence of `pattern` in `html`. `pattern` may be a plain
+// string (indexOf-scanned) or a RegExp (matched with a forced 'g' flag via
+// matchAll, on a clone so the caller's own pattern — used un-cloned for the
+// actual replace below — is never mutated).
+//
+// NOT `html.match(pattern)`: with a non-global RegExp, String#match returns
+// only the *first* match (plus any capture groups), so its .length reflects
+// the capture-group count, not the number of occurrences in the document —
+// it's 1 whether the tag appears once or five times, and only null at zero
+// occurrences. That silently defeats the "exactly 1 match" check below.
+function countOccurrences(html, pattern) {
+  if (typeof pattern === 'string') {
+    if (pattern.length === 0) return 0;
+    let count = 0;
+    let fromIndex = 0;
+    for (;;) {
+      const found = html.indexOf(pattern, fromIndex);
+      if (found === -1) return count;
+      count += 1;
+      fromIndex = found + pattern.length;
+    }
+  }
+  const flags = pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`;
+  return [...html.matchAll(new RegExp(pattern.source, flags))].length;
+}
+
 // Replaces exactly one occurrence of `pattern` in `html`, throwing (naming
 // `label`) if the match count isn't exactly 1. This is the guard against the
 // "build succeeds, page is 200, but the canonical tag silently still points
 // at the homepage" failure mode — a head tag going missing or duplicating
 // fails the build instead of shipping quietly.
 function replaceOnce(html, pattern, replacement, label) {
-  const matches = html.match(pattern);
-  const count = matches ? matches.length : 0;
+  const count = countOccurrences(html, pattern);
   if (count !== 1) {
     throw new Error(
       `expected exactly 1 match for ${label}, found ${count}`,
