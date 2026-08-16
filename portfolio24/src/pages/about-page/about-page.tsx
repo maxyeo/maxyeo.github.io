@@ -14,6 +14,7 @@ export function AboutPage() {
       {/* Sole image on this route and the LCP element, so it's loaded eagerly rather than lazily. */}
       <img
         src='/archive/2024/max.webp'
+        alt='Maxwell Yeo grinning as he vaults a wooden obstacle wall in a stadium, arm cocked mid-swing'
         width={portrait?.width}
         height={portrait?.height}
         loading='eager'

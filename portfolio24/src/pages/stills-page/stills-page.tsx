@@ -22,6 +22,7 @@ export function StillsPage() {
             <img
               key={image.path}
               src={image.path}
+              alt={image.alt}
               width={dimensions?.width}
               height={dimensions?.height}
               loading={eager ? 'eager' : 'lazy'}
