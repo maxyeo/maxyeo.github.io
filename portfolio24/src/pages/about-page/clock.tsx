@@ -14,19 +14,28 @@ export function Clock() {
     }
   }, [])
 
-  function padZero(number: number): string {
-    return (number < 10 ? '0' : '') + number
+  function getLosAngelesParts() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    }).formatToParts(time)
+
+    const hour = parts.find(part => part.type === 'hour')?.value ?? ''
+    const minute = parts.find(part => part.type === 'minute')?.value ?? ''
+    const dayPeriod = (parts.find(part => part.type === 'dayPeriod')?.value ?? '').replace(/\./g, '').toUpperCase()
+
+    return { hour, minute, dayPeriod }
   }
 
-  function getHours() {
-    return Number(time.toLocaleTimeString('en-US', {timeZone: 'America/Los_Angeles', hour12: false, hour: '2-digit'}))
-  }
+  const { hour, minute, dayPeriod } = getLosAngelesParts()
 
   return <>
-    { getHours() % 12 || 12 }
+    { hour }
     <span className='blink'>:</span>
-    { padZero(time.getMinutes()) }
+    { minute }
     <span> </span>
-    { getHours() >= 12 ? 'PM' : 'AM' }
+    { dayPeriod }
   </>
 }
