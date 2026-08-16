@@ -3,3 +3,5 @@ test
 dist/
 portfolio24/.vite/
 portfolio24/node_modules/
+.claude-surf-meta.json
+.claude-surf-status.json
