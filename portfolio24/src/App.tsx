@@ -4,13 +4,8 @@ import { MotionPage } from './pages/motion-page/motion-page'
 import { StillsPage } from './pages/stills-page/stills-page'
 import { AboutPage } from './pages/about-page/about-page'
 import { NotFoundPage } from './pages/not-found-page/not-found-page'
+import { CANONICAL_PATHS, CANONICAL_ORIGIN, toCanonicalPath } from './routes-meta'
 import './App.css'
-
-// The routes that actually exist, written the way sitemap.xml writes them —
-// root keeps its trailing slash, the others don't — so the canonical tag and
-// the sitemap always agree character-for-character.
-const CANONICAL_PATHS = new Set(['/', '/stills', '/about']);
-const CANONICAL_ORIGIN = 'https://maxwellyeo.com';
 
 function App() {
   const [menuActive, setMenuActive] = useState(false);
@@ -19,8 +14,17 @@ function App() {
   // index.html ships a canonical pointing at /, which is the right guess for
   // a crawler that never runs this script. But this is a router: without
   // this effect every route would keep claiming / as canonical, which risks
-  // a search engine folding /stills and /about (both listed in sitemap.xml)
-  // into the homepage instead of indexing them.
+  // a search engine folding /stills/ and /about/ (both listed in
+  // sitemap.xml, trailing slash and all) into the homepage instead of
+  // indexing them.
+  //
+  // location.pathname is normalised to the trailing-slash canonical form
+  // before the CANONICAL_PATHS lookup (see toCanonicalPath) so that
+  // '/stills', '/stills/' and '/stills//' all resolve the same way — react
+  // router treats the trailing slash as optional when matching routes, so
+  // any of those forms can legitimately end up in location.pathname. This
+  // also keeps the computed value identical to what scripts/prerender.mjs
+  // bakes into the pre-rendered pages, so hydration never flips the tag.
   //
   // Anything outside CANONICAL_PATHS is the not-found route, which isn't
   // worth indexing and shouldn't declare a bad URL canonical of itself, so it
@@ -33,8 +37,9 @@ function App() {
   useEffect(() => {
     const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     if (!canonical) return;
-    canonical.href = CANONICAL_PATHS.has(location.pathname)
-      ? `${CANONICAL_ORIGIN}${location.pathname}`
+    const normalized = toCanonicalPath(location.pathname);
+    canonical.href = CANONICAL_PATHS.has(normalized)
+      ? `${CANONICAL_ORIGIN}${normalized}`
       : `${CANONICAL_ORIGIN}/`;
   }, [location.pathname]);
 
@@ -45,8 +50,14 @@ function App() {
           <Link to='/'><h1 onClick={() => setMenuActive(false)}>Maxwell Yeo</h1></Link>
           <nav>
             <NavLink to="/" onClick={() => setMenuActive(false)}>Motion<span>,</span></NavLink>
-            <NavLink to="/stills" onClick={() => setMenuActive(false)}>Stills<span>,</span></NavLink>
-            <NavLink to="/about" onClick={() => setMenuActive(false)}>About</NavLink>
+            {/* Trailing slash: (a) pre-rendered pages now ship a real <a href>
+                link graph to a no-JS crawler pointing at the 200 URL, not a
+                301; (b) client-side nav leaves the address bar on /stills/,
+                so a reload is a direct 200. Safe because react router treats
+                the trailing slash as optional when matching <Route path>, and
+                NavLink's active check compares '/stills/' to '/stills/'. */}
+            <NavLink to="/stills/" onClick={() => setMenuActive(false)}>Stills<span>,</span></NavLink>
+            <NavLink to="/about/" onClick={() => setMenuActive(false)}>About</NavLink>
           </nav>
           <button id='menu-button' onClick={() => setMenuActive(!menuActive)}>
             <div id='close-menu-button'>Close</div>

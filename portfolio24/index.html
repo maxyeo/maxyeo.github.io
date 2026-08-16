@@ -46,11 +46,20 @@
     <link rel="icon" type="image/png" href="/archive/2024/max-fav.png" />
 
     <!-- Static default for crawlers that don't run JS and land on /. The app
-         is a router with real routes at /stills and /about (both listed in
-         sitemap.xml), so this href gets kept in sync with the current path
-         once React mounts — see the effect in App.tsx. Without that, every
-         route would claim / as canonical and a search engine could fold
-         /stills and /about out of its index in favour of the homepage. -->
+         also has real routes at /stills/ and /about/ (both listed in
+         sitemap.xml, trailing slash and all) — those are pre-rendered at
+         build time (scripts/prerender.mjs) with their own correct canonical
+         baked in, so this default only matters for /. For a route rendered
+         client-side, this href gets kept in sync with the current path once
+         React mounts — see the effect in App.tsx. Without that, every route
+         would claim / as canonical and a search engine could fold /stills/
+         and /about/ out of its index in favour of the homepage.
+
+         This file doubles as the template every pre-rendered page is cloned
+         from (see prerender.mjs), so anything added to <head> lands on every
+         route — desirable for the GA snippet and font preload below, and why
+         per-route tags like this one are rewritten in place by the script
+         rather than appended a second time. -->
     <link rel="canonical" href="https://maxwellyeo.com/" />
 
     <meta property="og:title" content="Maxwell Yeo | Creative Portfolio"/>
@@ -75,6 +84,11 @@
       // This is a classic inline script, so it runs during parsing — ahead of
       // the deferred module above — and the router mounts already seeing the
       // path the visitor originally asked for.
+      //
+      // This script ships on /stills/ and /about/ too (see the template note
+      // above), where 'redirect' should never actually be set — those are
+      // real 200 files now, not a 404.html bounce target — so on those
+      // routes this is normally a same-key read-and-clear no-op.
       const redirect = sessionStorage.getItem('redirect');
       sessionStorage.removeItem('redirect');
 

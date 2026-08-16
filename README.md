@@ -89,3 +89,21 @@ above does not apply to `img/motion/` — but the "never delete from
 
 Pushes to `main` build the React application and deploy the resulting `dist/`
 directory to GitHub Pages. Generated build files are not committed.
+
+`npm run build` (from `portfolio24/`) is three steps: `tsc`, then
+`vite build`, then `node scripts/prerender.mjs`. That third step
+pre-renders `/stills/` and `/about/` into real files —
+`dist/stills/index.html` and `dist/about/index.html` — with actual rendered
+content, not meta-only stubs. GitHub Pages has no server-side rewrite rule,
+so a client-side-only route listed in `static/sitemap.xml` would otherwise
+be served `static/404.html` on the wire to anything that doesn't run
+JavaScript (issue #29); a real file at that path is a genuine 200. `/` is
+deliberately not pre-rendered — it's the landing point `static/404.html`
+bounces every unmatched path to.
+
+Adding a new route requires adding it to `portfolio24/src/routes-meta.ts`
+**and** `static/sitemap.xml` — the build fails loudly if the two disagree.
+Like `resize-images` above, this pre-render step reads from what's already
+on disk (here, the freshly built `dist/`) rather than being folded into the
+Vite build itself; unlike `resize-images` it *is* part of `npm run build`,
+since a stale `dist/stills/index.html` would be exactly issue #29 again.
