@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.maxwellyeo.com/sitemap.xml
+Sitemap: https://maxwellyeo.com/sitemap.xml
