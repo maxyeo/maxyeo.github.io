@@ -45,9 +45,17 @@
     <meta name="theme-color" content="#242424">
     <link rel="icon" type="image/png" href="/archive/2024/max-fav.png" />
 
+    <!-- Static default for crawlers that don't run JS and land on /. The app
+         is a router with real routes at /stills and /about (both listed in
+         sitemap.xml), so this href gets kept in sync with the current path
+         once React mounts — see the effect in App.tsx. Without that, every
+         route would claim / as canonical and a search engine could fold
+         /stills and /about out of its index in favour of the homepage. -->
+    <link rel="canonical" href="https://maxwellyeo.com/" />
+
     <meta property="og:title" content="Maxwell Yeo | Creative Portfolio"/>
-    <meta property="og:url" content="https://www.maxwellyeo.com/"/>
-    <meta property="og:image" content="https://www.maxwellyeo.com/archive/2024/max-og.jpg"/>
+    <meta property="og:url" content="https://maxwellyeo.com/"/>
+    <meta property="og:image" content="https://maxwellyeo.com/archive/2024/max-og.jpg"/>
     <meta property="og:image:width" content="1920"/>
     <meta property="og:image:height" content="1080"/>
     <meta property="og:site_name" content="Maxwell Yeo"/>
@@ -57,7 +65,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Maxwell Yeo | Creative Portfolio">
     <meta name="twitter:description" content="Portfolio for my camera hobby — dance films and portrait photography">
-    <meta name="twitter:image" content="https://www.maxwellyeo.com/archive/2024/max-og.jpg">
+    <meta name="twitter:image" content="https://maxwellyeo.com/archive/2024/max-og.jpg">
   </head>
   <body>
     <div id="root"></div>
