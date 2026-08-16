@@ -3,6 +3,7 @@ import { Routes, Route, Link, NavLink } from 'react-router-dom'
 import { MotionPage } from './pages/motion-page/motion-page'
 import { StillsPage } from './pages/stills-page/stills-page'
 import { AboutPage } from './pages/about-page/about-page'
+import { NotFoundPage } from './pages/not-found-page/not-found-page'
 import './App.css'
 
 function App() {
@@ -29,6 +30,10 @@ function App() {
           <Route path="/" element={<MotionPage />} />
           <Route path="/stills" element={<StillsPage />} />
           <Route path="/about" element={<AboutPage />} />
+          {/* Catch-all. static/404.html bounces every unmatched path here, so
+              this route — not the hosting layer — decides what is a real page.
+              Adding a route above needs no change anywhere else. */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
     </>
