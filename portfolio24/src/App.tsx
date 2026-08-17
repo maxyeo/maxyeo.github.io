@@ -80,9 +80,14 @@ function App() {
 
   return (
     <>
+      {/* A raw <a>, not a router Link: Link would push a route for what's
+          really a same-document fragment jump, and a hash navigation fires
+          hashchange rather than popstate, so location.pathname would never
+          change and the meta-sync effect above would never re-run. */}
+      <a className='skip-link' href='#main-content'>Skip to content</a>
       <header className={ menuActive ? 'active' : '' }>
         <div id='header-wrapper'>
-          <Link to='/'><h1 onClick={() => setMenuActive(false)}>Maxwell Yeo</h1></Link>
+          <Link to='/'><div className='wordmark' onClick={() => setMenuActive(false)}>Maxwell Yeo</div></Link>
           {/* Both labels below stay permanently mounted — App.css slides them
               past each other inside an overflow:hidden box, a purely visual
               trick, so a screen reader sees both "Close" and "Menu" at once
@@ -123,7 +128,7 @@ function App() {
           </nav>
         </div>
       </header>
-      <main>
+      <main id='main-content' tabIndex={-1}>
         <Routes>
           <Route path="/" element={<MotionPage />} />
           <Route path="/stills" element={<StillsPage />} />

@@ -7,6 +7,7 @@ export function AboutPage() {
 
   return (
     <div id='about'>
+      <h1 className='visually-hidden'>About Maxwell Yeo</h1>
       <div className='about-col'>
         <p>Currently based in Los Angeles (<Clock/>), I'm a hobbyist camera dude with a <a target='_blank' rel='noopener noreferrer' href='https://www.linkedin.com/in/maxwellyeo'>day job</a>.  If I'm not click clacking at my desk, I'm probably wiping out on the mountains snowboarding or in the ocean surfing. </p>
         <p>Always looking to do more creative projects, send me a message at <a href='mailto:hello@maxwellyeo.com'>hello@maxwellyeo.com</a></p>

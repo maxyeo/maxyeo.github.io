@@ -14,6 +14,7 @@ export function StillsPage() {
 
   return (
     <div id='stills'>
+      <h1 className='visually-hidden'>Stills — portrait photography by Maxwell Yeo</h1>
       <div id='stills-list'>
         {images.map((image, index) => {
           const dimensions = getImageDimensions(image.path);

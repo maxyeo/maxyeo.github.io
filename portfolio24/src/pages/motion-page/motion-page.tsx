@@ -11,6 +11,7 @@ export function MotionPage() {
 
   return (
     <div id='motion'>
+      <h1 className='visually-hidden'>Motion — dance films by Maxwell Yeo</h1>
       {/* <p>I love dancing, it became my path into videography.  The human form and its movement is still one of my favorite things to shoot.</p> */}
       <div id='motion-list'>
         {videos.map((video, index) => (

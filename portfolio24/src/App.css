@@ -80,10 +80,19 @@ nav a.active::before {
   transform-origin: left;
 }
 
-header h1 {
+/* The wordmark is a div, not a heading — there's exactly one h1 per page,
+   and it's the visually-hidden one in each page component (see
+   src/pages/*). A div doesn't get the UA stylesheet's bold like the h1 it
+   replaced; it inherits font-weight: 500 instead, from the wrapping Link
+   (index.css's `a { font-weight: 500 }`). font-weight: bold (700)
+   font-matches down to the 600 "Bold" cut declared in index.css, which is
+   exactly what the old h1 rendered at, so this reproduces the previous
+   look pixel-for-pixel. */
+header .wordmark {
   margin: 0;
   font-size: 3.2em;
   line-height: 1;
+  font-weight: bold;
 }
 
 #menu-button {
@@ -116,8 +125,48 @@ main {
   padding: 8rem 0 6rem;
 }
 
+/* The tabIndex={-1} on <main> (App.tsx) makes it programmatically
+   focusable so the skip link below can actually move focus there, but a
+   browser draws a focus ring on anything it focuses by default — even
+   though nothing was clicked or tabbed to directly. That ring would
+   outline the entire page content. Suppress it here rather than relying
+   on :focus-visible, since this focus is always set via JS, never via
+   keyboard navigation into main itself. */
+main:focus {
+  outline: none;
+}
+
+/* Not .visually-hidden: that class has no way back out once applied.
+   This element needs to stay off-screen at rest but become visible the
+   moment it receives keyboard focus, so it uses the same
+   clip-path: inset() technique directly rather than reusing a class built
+   for content that's never meant to reappear. */
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link:focus-visible {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  clip-path: none;
+  /* z-index 2 outranks header's z-index: 1, so the chip sits above the
+     fixed header instead of underneath it. */
+  z-index: 2;
+  padding: .75em 1.25em;
+  /* The site's own inverted palette (light text/dark background inverted),
+     which clears AA contrast: see index.css's own #646cff-on-#242424
+     comment for the site's contrast bar. */
+  color: #242424;
+  background-color: #e2e2e2;
+}
+
 @media (width < 650px) {
-  header h1 {
+  header .wordmark {
     font-size: 1.6rem;
   }
 
