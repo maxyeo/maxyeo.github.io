@@ -4,43 +4,78 @@ import { MotionPage } from './pages/motion-page/motion-page'
 import { StillsPage } from './pages/stills-page/stills-page'
 import { AboutPage } from './pages/about-page/about-page'
 import { NotFoundPage } from './pages/not-found-page/not-found-page'
-import { CANONICAL_PATHS, CANONICAL_ORIGIN, toCanonicalPath } from './routes-meta'
+import { ROUTES_BY_PATH, CANONICAL_ORIGIN, toCanonicalPath } from './routes-meta'
 import './App.css'
+
+// static/404.html already ships this exact title for the wire-level 404
+// GitHub Pages serves before any JS runs; a client-side navigation to a dead
+// path (no reload, so 404.html is never involved) gets the same copy, so the
+// two never disagree about what a bad URL is called. Not in routes-meta.ts's
+// ROUTES: the not-found route isn't real, isn't in sitemap.xml, and must not
+// be pre-rendered or declared canonical of itself — see the URL fallback
+// below, which stays independent of this.
+const NOT_FOUND_META = {
+  title: 'Page not found | Maxwell Yeo',
+  description: "That page doesn't exist. Head back to the portfolio — dance films, portrait photography and how to get in touch.",
+};
+
+function setMetaContent(selector: string, content: string) {
+  const meta = document.querySelector<HTMLMetaElement>(selector);
+  if (meta) meta.content = content;
+}
 
 function App() {
   const [menuActive, setMenuActive] = useState(false);
   const location = useLocation();
 
-  // index.html ships a canonical pointing at /, which is the right guess for
-  // a crawler that never runs this script. But this is a router: without
-  // this effect every route would keep claiming / as canonical, which risks
-  // a search engine folding /stills/ and /about/ (both listed in
-  // sitemap.xml, trailing slash and all) into the homepage instead of
-  // indexing them.
+  // index.html ships static defaults (title, canonical, description, and the
+  // OG/Twitter tags) that are the right guess for a crawler that never runs
+  // this script and lands on /. scripts/prerender.mjs bakes the correct
+  // per-route values into /stills/ and /about/'s own initial HTML too — but
+  // both of those only cover a page's *first* paint. Once React has
+  // hydrated, further navigation between routes happens entirely client-side
+  // via React Router with no reload, so without this effect every route
+  // would keep whichever page's tags were rendered first: /stills/ and
+  // /about/ (both listed in sitemap.xml) would carry the homepage's title
+  // and description in the tab and in any share sheet that reads the live
+  // DOM, and a search engine could fold them into the homepage instead of
+  // indexing them separately.
   //
   // location.pathname is normalised to the trailing-slash canonical form
-  // before the CANONICAL_PATHS lookup (see toCanonicalPath) so that
+  // before the ROUTES_BY_PATH lookup (see toCanonicalPath) so that
   // '/stills', '/stills/' and '/stills//' all resolve the same way — react
   // router treats the trailing slash as optional when matching routes, so
   // any of those forms can legitimately end up in location.pathname. This
   // also keeps the computed value identical to what scripts/prerender.mjs
   // bakes into the pre-rendered pages, so hydration never flips the tag.
   //
-  // Anything outside CANONICAL_PATHS is the not-found route, which isn't
-  // worth indexing and shouldn't declare a bad URL canonical of itself, so it
-  // falls back to root. That fallback is written out rather than skipped: a
+  // Anything outside ROUTES_BY_PATH is the not-found route, which isn't
+  // worth indexing and shouldn't declare a bad URL canonical of itself, so
+  // its URL falls back to root while its title/description come from
+  // NOT_FOUND_META. That URL fallback is written out rather than skipped: a
   // bare early return would strand the tag on whichever real route was
   // rendered last. Today no in-app link points anywhere invalid and 404.html
   // bounces via a full page load, so a stale value can't actually surface —
   // but that's a property of another file, not of this one, and the first
   // client-side link to a dead path would quietly turn it into a bug.
+  //
+  // og:image, twitter:image, og:site_name, og:type and twitter:card are
+  // deliberately left out of this rewrite: they're identical on every route.
   useEffect(() => {
-    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-    if (!canonical) return;
     const normalized = toCanonicalPath(location.pathname);
-    canonical.href = CANONICAL_PATHS.has(normalized)
-      ? `${CANONICAL_ORIGIN}${normalized}`
-      : `${CANONICAL_ORIGIN}/`;
+    const route = ROUTES_BY_PATH.get(normalized);
+    const url = route ? `${CANONICAL_ORIGIN}${normalized}` : `${CANONICAL_ORIGIN}/`;
+    const { title, description } = route ?? NOT_FOUND_META;
+
+    document.title = title;
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (canonical) canonical.href = url;
+    setMetaContent('meta[name="description"]', description);
+    setMetaContent('meta[property="og:url"]', url);
+    setMetaContent('meta[property="og:title"]', title);
+    setMetaContent('meta[property="og:description"]', description);
+    setMetaContent('meta[name="twitter:title"]', title);
+    setMetaContent('meta[name="twitter:description"]', description);
   }, [location.pathname]);
 
   return (
@@ -48,7 +83,34 @@ function App() {
       <header className={ menuActive ? 'active' : '' }>
         <div id='header-wrapper'>
           <Link to='/'><h1 onClick={() => setMenuActive(false)}>Maxwell Yeo</h1></Link>
-          <nav>
+          {/* Both labels below stay permanently mounted — App.css slides them
+              past each other inside an overflow:hidden box, a purely visual
+              trick, so a screen reader sees both "Close" and "Menu" at once
+              and reads the button's name as "Close Menu" no matter the
+              state. aria-hidden pulls both out of the accessibility tree so
+              the button keeps one static name ("Menu") and aria-expanded
+              carries the open/closed state instead — no state-varying name,
+              which would redundantly (and confusingly) announce as
+              "Close, expanded". Nav is reordered after the button: when the
+              menu is open, header::before covers the viewport, so a button
+              that came after the nav in tab order would send a keyboard
+              visitor forward into content hidden behind the panel instead of
+              into the menu they just opened. This is layout-neutral — above
+              650px the button is display:none so the flex children are
+              [h1, nav] either way, and below 650px the nav is
+              position:absolute and out of flow. */}
+          <button
+            id='menu-button'
+            type='button'
+            aria-expanded={menuActive}
+            aria-controls='primary-navigation'
+            onClick={() => setMenuActive(!menuActive)}
+          >
+            <span className='visually-hidden'>Menu</span>
+            <div id='close-menu-button' aria-hidden='true'>Close</div>
+            <div id='open-menu-button' aria-hidden='true'>Menu</div>
+          </button>
+          <nav id='primary-navigation' aria-label='Primary'>
             <NavLink to="/" onClick={() => setMenuActive(false)}>Motion<span>,</span></NavLink>
             {/* Trailing slash: (a) pre-rendered pages now ship a real <a href>
                 link graph to a no-JS crawler pointing at the 200 URL, not a
@@ -59,10 +121,6 @@ function App() {
             <NavLink to="/stills/" onClick={() => setMenuActive(false)}>Stills<span>,</span></NavLink>
             <NavLink to="/about/" onClick={() => setMenuActive(false)}>About</NavLink>
           </nav>
-          <button id='menu-button' onClick={() => setMenuActive(!menuActive)}>
-            <div id='close-menu-button'>Close</div>
-            <div id='open-menu-button'>Menu</div>
-          </button>
         </div>
       </header>
       <main>
