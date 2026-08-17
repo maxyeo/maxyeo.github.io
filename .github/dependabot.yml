@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # The npm lockfile lives in portfolio24/, not the repo root, so that's
+  # where Dependabot needs to look for package.json / package-lock.json.
+  - package-ecosystem: npm
+    directory: /portfolio24
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # GitHub Actions manifests are always resolved from the repo root's
+  # .github/workflows/, regardless of where the workflows themselves
+  # deploy from. Required here because the workflow steps are now
+  # pinned to commit SHAs (see .github/workflows/*.yml): those pins are
+  # frozen at whatever commit was current when they were written, and
+  # without Dependabot watching for new releases they would never move
+  # again on their own.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
