@@ -24,18 +24,27 @@ export const ROUTES: RouteMeta[] = [
   },
   {
     canonicalPath: '/stills/',
-    title: 'Stills — Portrait Photography | Maxwell Yeo',
+    title: 'Stills — Maxwell Yeo | Portrait Photography',
     description: 'Portrait, graduation and street photography by Maxwell Yeo — studio and natural-light portraits, couples and graduation sessions, and frames from the road.',
   },
   {
     canonicalPath: '/about/',
-    title: 'About and Contact | Maxwell Yeo',
+    title: 'About — Maxwell Yeo | Creative Portfolio',
     description: 'Maxwell Yeo shoots dance films and portraits in Los Angeles as a hobby, around a day job. Always up for creative projects — hello@maxwellyeo.com',
   },
 ];
 
 // Derived, not hand-listed, so it can never drift from ROUTES.
 export const CANONICAL_PATHS = new Set(ROUTES.map((route) => route.canonicalPath));
+
+// Also derived. scripts/prerender.mjs bakes each route's title/description/
+// canonical/OG/Twitter tags into its initial HTML, but that only covers a
+// page's first paint — a visitor who then navigates client-side via React
+// Router (no reload) would keep whichever route's tags were rendered first
+// unless something rewrites them on every navigation too. App.tsx's effect
+// is that something; this map is how it looks a path up to both confirm it's
+// real and fetch its copy in one step.
+export const ROUTES_BY_PATH = new Map(ROUTES.map((route) => [route.canonicalPath, route]));
 
 // Every real route except the homepage. "/" is deliberately never
 // pre-rendered — see scripts/prerender.mjs and the PR description for why.

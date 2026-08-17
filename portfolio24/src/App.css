@@ -121,6 +121,11 @@ main {
     font-size: 1.6rem;
   }
 
+  /* visibility (not just opacity) is what actually pulls a closed menu out
+     of the accessibility tree and tab order — the button's aria-expanded
+     relies on that: dropping visibility for an opacity-only fade would leave
+     it announcing "collapsed" while a screen reader could still walk into
+     the invisible menu. */
   nav {
     position: absolute;
     flex-direction: column;
