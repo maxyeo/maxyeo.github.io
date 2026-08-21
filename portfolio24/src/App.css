@@ -235,3 +235,30 @@ main:focus {
     display: block;
   }
 }
+
+/* Every transition in this file is decoration on a state the CSS already
+   expresses statically: the header's colour flip, the panel sliding down
+   over the viewport, the menu button's label swap, the nav's staggered
+   entrance and the underline that draws itself under the current route.
+   Dropping the transitions leaves all of those end states intact and simply
+   snaps between them — nothing becomes unreachable or invisible, including
+   the visibility flips the closed menu's accessibility depends on.
+   Deliberately scoped to this file's own motion instead of a global
+   `* { transition: none }`: motion-page.css already opts its one transition
+   out the same way, so the exemption stays next to the thing it exempts.
+   The :nth-child selectors are repeated verbatim rather than collapsed into
+   a single `nav a` — they carry a pseudo-class, so a bare `nav a` would lose
+   the specificity tie and leave the stagger running. */
+@media (prefers-reduced-motion: reduce) {
+  header,
+  header::before,
+  #open-menu-button,
+  #close-menu-button,
+  nav,
+  nav a::before,
+  nav a:nth-child(1),
+  nav a:nth-child(2),
+  nav a:nth-child(3) {
+    transition: none;
+  }
+}
