@@ -27,6 +27,12 @@ function setMetaContent(selector: string, content: string) {
 function App() {
   const [menuActive, setMenuActive] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  // Which element gets focus when the menu closes depends on how it closed:
+  // Escape and the toggle button itself return focus to #menu-button (the
+  // control the user just used), but a nav-link (or the wordmark) closing
+  // the menu is really a route change — see the cleanup in the trap effect
+  // below for why that case sends focus to #main-content instead.
+  const closeFocusTargetRef = useRef<'button' | 'main'>('button');
   const location = useLocation();
 
   // The mobile menu's only two affordances live below 650px: #menu-button
@@ -64,12 +70,17 @@ function App() {
   // it's open a sighted mouse user simply can't reach anything behind it —
   // but without this effect a keyboard user could still Tab straight through
   // #menu-button and #primary-navigation into main-content, or scroll the
-  // hidden page underneath. This effect only runs while menuActive is true,
-  // so it never touches focus or overflow on first mount (menuActive starts
-  // false, see the comment above) and always leaves both exactly as it found
-  // them once the menu closes, however that happens: Escape, a nav link's own
-  // onClick, or the breakpoint effect above clearing menuActive out from
-  // under it.
+  // hidden page underneath. It's effectively a modal, WAI-ARIA APG's dialog
+  // pattern in everything but name, and Tab order alone only stops
+  // *sequential* focus: a screen reader's virtual/browse cursor (VoiceOver
+  // rotor and swipe navigation, JAWS virtual cursor) walks the whole DOM
+  // regardless of Tab order, so the background needs to be made inert too —
+  // see below. This effect only runs while menuActive is true, so it never
+  // touches focus, overflow or inert on first mount (menuActive starts
+  // false, see the comment above) and always leaves all three exactly as it
+  // found them once the menu closes, however that happens: Escape, a nav
+  // link's own onClick, or the breakpoint effect above clearing menuActive
+  // out from under it.
   useEffect(() => {
     if (!menuActive) return;
 
@@ -93,13 +104,34 @@ function App() {
     const firstLink = panel.querySelector<HTMLElement>(focusableSelector);
     (firstLink ?? button).focus();
 
+    // <header> (the button plus this panel) is the one thing that must stay
+    // reachable; everything App renders alongside it — the skip link and
+    // #main-content — sits under #root as a sibling of <header>, so walking
+    // #root's own children and skipping <header> reaches exactly that
+    // background content without hardcoding what it is. The native `inert`
+    // attribute both removes an element from the browse/virtual-cursor order
+    // screen readers use and blocks pointer and keyboard interaction with
+    // it, standing in for aria-hidden here without a second attribute to
+    // keep in sync. Each element's own previous .inert is captured before
+    // it's overwritten — same care as previousOverflow just below takes with
+    // body.style.overflow — because something else may already have marked
+    // it inert, and restoring a hardcoded false on close would clobber that.
+    const header = panel.closest('header');
+    const backgroundElements = Array.from(document.getElementById('root')?.children ?? [])
+      .filter((el): el is HTMLElement => el instanceof HTMLElement && el !== header);
+    const previousInert = backgroundElements.map((el) => el.inert);
+    backgroundElements.forEach((el) => { el.inert = true; });
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        // The close itself (and the focus/overflow cleanup below) happens
-        // via the state change re-running this effect, same as any other
-        // way of closing the menu — Escape doesn't need its own restore
-        // logic.
+        // The close itself (and the focus/overflow/inert cleanup below)
+        // happens via the state change re-running this effect, same as any
+        // other way of closing the menu — Escape doesn't need its own
+        // restore logic. Escape dismisses rather than activates a
+        // destination, so focus belongs back on the control that opened the
+        // panel, same as the toggle button's own onClick below.
         event.preventDefault();
+        closeFocusTargetRef.current = 'button';
         setMenuActive(false);
         return;
       }
@@ -132,6 +164,26 @@ function App() {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
+      backgroundElements.forEach((el, index) => { el.inert = previousInert[index]; });
+
+      // Below 650px (App.css) the panel goes display:none the moment
+      // menuActive flips false, so a clicked nav link has nowhere left to
+      // hold focus — the <a> itself just vanished — and leaving focus where
+      // it was would drop it to <body>, losing the user's place entirely.
+      // Closing via a nav link (or the wordmark) is a route change, not a
+      // dismissal, so per APG's "close via menu item activation" guidance
+      // focus moves forward to #main-content — the same skip-link target —
+      // landing the user at the top of the page they just navigated to
+      // instead of back on the hamburger they never touched.
+      // closeFocusTargetRef defaults to 'button' and is only ever set to
+      // 'main' by those nav/wordmark onClick handlers, so Escape and the
+      // toggle button (which set it to 'button' themselves, and the
+      // breakpoint-crossing effect above, which never touches it) all fall
+      // through to the button-focus branch below.
+      if (closeFocusTargetRef.current === 'main') {
+        document.getElementById('main-content')?.focus();
+        return;
+      }
 
       // The breakpoint-crossing effect above can flip menuActive to false at
       // the exact moment #menu-button goes display:none, so this cleanup can
@@ -202,7 +254,7 @@ function App() {
       <a className='skip-link' href='#main-content'>Skip to content</a>
       <header className={ menuActive ? 'active' : '' }>
         <div id='header-wrapper'>
-          <Link to='/'><div className='wordmark' onClick={() => setMenuActive(false)}>Maxwell Yeo</div></Link>
+          <Link to='/'><div className='wordmark' onClick={() => { closeFocusTargetRef.current = 'main'; setMenuActive(false); }}>Maxwell Yeo</div></Link>
           {/* Both labels below stay permanently mounted — App.css slides them
               past each other inside an overflow:hidden box, a purely visual
               trick, so a screen reader sees both "Close" and "Menu" at once
@@ -225,22 +277,22 @@ function App() {
             type='button'
             aria-expanded={menuActive}
             aria-controls='primary-navigation'
-            onClick={() => setMenuActive(!menuActive)}
+            onClick={() => { closeFocusTargetRef.current = 'button'; setMenuActive((active) => !active); }}
           >
             <span className='visually-hidden'>Menu</span>
             <div id='close-menu-button' aria-hidden='true'>Close</div>
             <div id='open-menu-button' aria-hidden='true'>Menu</div>
           </button>
           <nav id='primary-navigation' aria-label='Primary'>
-            <NavLink to="/" onClick={() => setMenuActive(false)}>Motion<span>,</span></NavLink>
+            <NavLink to="/" onClick={() => { closeFocusTargetRef.current = 'main'; setMenuActive(false); }}>Motion<span>,</span></NavLink>
             {/* Trailing slash: (a) pre-rendered pages now ship a real <a href>
                 link graph to a no-JS crawler pointing at the 200 URL, not a
                 301; (b) client-side nav leaves the address bar on /stills/,
                 so a reload is a direct 200. Safe because react router treats
                 the trailing slash as optional when matching <Route path>, and
                 NavLink's active check compares '/stills/' to '/stills/'. */}
-            <NavLink to="/stills/" onClick={() => setMenuActive(false)}>Stills<span>,</span></NavLink>
-            <NavLink to="/about/" onClick={() => setMenuActive(false)}>About</NavLink>
+            <NavLink to="/stills/" onClick={() => { closeFocusTargetRef.current = 'main'; setMenuActive(false); }}>Stills<span>,</span></NavLink>
+            <NavLink to="/about/" onClick={() => { closeFocusTargetRef.current = 'main'; setMenuActive(false); }}>About</NavLink>
           </nav>
         </div>
       </header>
