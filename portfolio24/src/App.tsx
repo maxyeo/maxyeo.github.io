@@ -28,6 +28,37 @@ function App() {
   const [menuActive, setMenuActive] = useState(false);
   const location = useLocation();
 
+  // The mobile menu's only two affordances live below 650px: #menu-button
+  // (display: none above the breakpoint, App.css) and the full-viewport
+  // header::before panel. Nothing in CSS unsets menuActive when the viewport
+  // grows past 650px, so a phone rotated into landscape crosses the
+  // breakpoint still holding an open menu — the #dedede panel keeps covering
+  // the viewport and swallowing clicks while the button that would close it
+  // has just been display:none'd away. Clearing the state at the crossing
+  // fixes that, the inverted header.active colour and the stale
+  // aria-expanded="true" on a hidden button in one move; scoping the
+  // ::before rules to the media query instead would only address the first
+  // of the three.
+  //
+  // The query is App.css's `@media (width < 650px)` inverted, range syntax
+  // and all, so the breakpoint can't drift between the two files. A browser
+  // too old to parse range syntax drops that media block as well, never
+  // shows the button, and so never has an open menu to clear.
+  //
+  // No initial check to match: menuActive starts false and only the button
+  // can set it, so the state cannot already be true on mount. matchMedia
+  // runs in an effect because this component is also rendered by
+  // scripts/prerender.mjs, where there is no window.
+  useEffect(() => {
+    const desktop = window.matchMedia('(width >= 650px)');
+    const closeMenuOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMenuActive(false);
+    };
+
+    desktop.addEventListener('change', closeMenuOnDesktop);
+    return () => desktop.removeEventListener('change', closeMenuOnDesktop);
+  }, []);
+
   // index.html ships static defaults (title, canonical, description, and the
   // OG/Twitter tags) that are the right guess for a crawler that never runs
   // this script and lands on /. scripts/prerender.mjs bakes the correct

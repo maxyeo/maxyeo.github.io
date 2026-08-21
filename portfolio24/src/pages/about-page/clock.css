@@ -7,3 +7,14 @@
 .blink {
   animation: blinker 1s linear infinite;
 }
+
+/* A colon flashing once a second, forever, is the textbook case
+   prefers-reduced-motion exists for — it never ends and it sits in the
+   middle of text someone is trying to read. Under reduce it holds steady at
+   full opacity, which loses nothing: the blink imitates a clock face, while
+   the time itself is carried by the digits either side. */
+@media (prefers-reduced-motion: reduce) {
+  .blink {
+    animation: none;
+  }
+}
