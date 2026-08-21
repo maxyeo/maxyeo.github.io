@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, Link, NavLink, useLocation } from 'react-router-dom'
 import { MotionPage } from './pages/motion-page/motion-page'
 import { StillsPage } from './pages/stills-page/stills-page'
@@ -26,6 +26,7 @@ function setMetaContent(selector: string, content: string) {
 
 function App() {
   const [menuActive, setMenuActive] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const location = useLocation();
 
   // The mobile menu's only two affordances live below 650px: #menu-button
@@ -58,6 +59,89 @@ function App() {
     desktop.addEventListener('change', closeMenuOnDesktop);
     return () => desktop.removeEventListener('change', closeMenuOnDesktop);
   }, []);
+
+  // The panel is header::before, a full-viewport overlay (App.css), so once
+  // it's open a sighted mouse user simply can't reach anything behind it —
+  // but without this effect a keyboard user could still Tab straight through
+  // #menu-button and #primary-navigation into main-content, or scroll the
+  // hidden page underneath. This effect only runs while menuActive is true,
+  // so it never touches focus or overflow on first mount (menuActive starts
+  // false, see the comment above) and always leaves both exactly as it found
+  // them once the menu closes, however that happens: Escape, a nav link's own
+  // onClick, or the breakpoint effect above clearing menuActive out from
+  // under it.
+  useEffect(() => {
+    if (!menuActive) return;
+
+    const panel = document.getElementById('primary-navigation');
+    const button = menuButtonRef.current;
+    if (!panel || !button) return;
+
+    const focusableSelector = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    // The button always leads: it precedes <nav> in DOM order (see the
+    // comment on #menu-button above), so this is also real Tab order, not
+    // just a convenient array to loop over.
+    const getFocusable = () => [
+      button,
+      ...Array.from(panel.querySelectorAll<HTMLElement>(focusableSelector)),
+    ];
+
+    // Land focus inside the panel, not on the button that's already focused
+    // from the click/Enter that opened it — a screen reader user needs to
+    // land on the first real destination, not hear their own click echoed
+    // back.
+    const firstLink = panel.querySelector<HTMLElement>(focusableSelector);
+    (firstLink ?? button).focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        // The close itself (and the focus/overflow cleanup below) happens
+        // via the state change re-running this effect, same as any other
+        // way of closing the menu — Escape doesn't need its own restore
+        // logic.
+        event.preventDefault();
+        setMenuActive(false);
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusable();
+      const lastIndex = focusable.length - 1;
+      const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
+
+      if (event.shiftKey) {
+        if (currentIndex <= 0) {
+          event.preventDefault();
+          focusable[lastIndex].focus();
+        }
+      } else if (currentIndex === -1 || currentIndex === lastIndex) {
+        event.preventDefault();
+        focusable[0].focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Never assume the previous value was '': something else (an inline
+    // style, a future feature) may already have set body.style.overflow, and
+    // clobbering that on close would be its own bug.
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+
+      // The breakpoint-crossing effect above can flip menuActive to false at
+      // the exact moment #menu-button goes display:none, so this cleanup can
+      // run with a button that's no longer on screen. offsetParent is null
+      // for display:none elements, so this guard is what stops that rotation
+      // from throwing focus onto (and visually stranding it on) a button the
+      // user can no longer see.
+      if (button.offsetParent !== null) button.focus();
+    };
+  }, [menuActive]);
 
   // index.html ships static defaults (title, canonical, description, and the
   // OG/Twitter tags) that are the right guess for a crawler that never runs
@@ -136,6 +220,7 @@ function App() {
               [h1, nav] either way, and below 650px the nav is
               position:absolute and out of flow. */}
           <button
+            ref={menuButtonRef}
             id='menu-button'
             type='button'
             aria-expanded={menuActive}
