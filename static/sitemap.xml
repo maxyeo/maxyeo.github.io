@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  URLs only. <lastmod> is deliberately absent here and stamped into
+  dist/sitemap.xml at build time by portfolio24/scripts/prerender.mjs, from
+  the HEAD commit date — a hand-written date in this file would be correct
+  on the day it was typed and quietly wrong every day after.
+  This file stays the source of truth for *which* URLs exist, and the build
+  fails if that set disagrees with src/routes-meta.ts's ROUTES.
+-->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://maxwellyeo.com/</loc>
-    <lastmod>2026-08-16</lastmod>
   </url>
   <url>
     <loc>https://maxwellyeo.com/stills/</loc>
-    <lastmod>2026-08-16</lastmod>
   </url>
   <url>
     <loc>https://maxwellyeo.com/about/</loc>
-    <lastmod>2026-08-16</lastmod>
   </url>
 </urlset>
