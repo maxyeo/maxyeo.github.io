@@ -103,6 +103,10 @@ bounces every unmatched path to.
 
 Adding a new route requires adding it to `portfolio24/src/routes-meta.ts`
 **and** `static/sitemap.xml` — the build fails loudly if the two disagree.
+`static/sitemap.xml` lists URLs only: the pre-render step stamps every
+`<lastmod>` into `dist/sitemap.xml` from the HEAD commit date (UTC), so the
+dates can't go stale the way a hand-written one does, and it fails the build
+if a `<lastmod>` is added to the source file by hand.
 Like `resize-images` above, this pre-render step reads from what's already
 on disk (here, the freshly built `dist/`) rather than being folded into the
 Vite build itself; unlike `resize-images` it *is* part of `npm run build`,
