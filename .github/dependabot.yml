@@ -7,6 +7,28 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Every npm bump edits portfolio24/package-lock.json, so a batch of
+    # individually-opened PRs all conflict with each other the moment the
+    # first one merges — each survivor then needs a rebase and a fresh CI
+    # run. Grouping collapses a week's worth into one PR that builds and
+    # merges once. Dev and runtime stay in separate groups because they
+    # carry different risk: devDependencies can only break the build (and
+    # CI runs the real `tsc && vite build`, so a break is caught here),
+    # while runtime deps ship to visitors and deserve their own diff.
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+      production-dependencies:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+    # Majors are deliberately left out of both groups above: an ungrouped
+    # major arrives as its own PR, which is what you want for the one
+    # update type that can carry breaking changes.
 
   # GitHub Actions manifests are always resolved from the repo root's
   # .github/workflows/, regardless of where the workflows themselves
@@ -20,3 +42,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # Action pins don't share a lockfile, so these never conflict the way
+    # the npm ones do — grouped purely to keep routine CI pin bumps to a
+    # single PR instead of one per action.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
